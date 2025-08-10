@@ -111,7 +111,7 @@ The rate limiter requires a store implementing:
 
 ```go
 type CounterStore interface {
-    Increment(ctx context.Context, key string, windowSeconds int) (count int, err error)
+    Incr(ctx context.Context, key string, windowSeconds int) (count int, err error)
 }
 ```
 

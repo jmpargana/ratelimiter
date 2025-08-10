@@ -41,8 +41,8 @@ type RateLimiterConfig struct {
 // RateLimiter provides methods to enforce rate limiting based on the provided
 // configuration and a counter store implementation.
 type RateLimiter struct {
-	m      store.CounterStore
-	Config *RateLimiterConfig
+	m   store.CounterStore
+	cfg *RateLimiterConfig
 }
 
 // LoadConfig reads a YAML configuration file from the given filepath
@@ -88,8 +88,8 @@ func New(cfg *RateLimiterConfig, store store.CounterStore) (*RateLimiter, error)
 	}
 
 	rl := &RateLimiter{
-		m:      store,
-		Config: cfg,
+		m:   store,
+		cfg: cfg,
 	}
 
 	return rl, nil
@@ -102,15 +102,15 @@ func New(cfg *RateLimiterConfig, store store.CounterStore) (*RateLimiter, error)
 //
 // Returns true if the request is within all applicable limits; false otherwise.
 func (rl *RateLimiter) Allow(ctx context.Context, endpoint, userId string) bool {
-	if !rl.withinLimit(ctx, GLOBAL_PREFIX, time.Duration(rl.Config.Global.Window)*time.Second, rl.Config.Global.Limit) {
+	if !rl.withinLimit(ctx, GLOBAL_PREFIX, time.Duration(rl.cfg.Global.Window)*time.Second, rl.cfg.Global.Limit) {
 		return false
 	}
 
-	if !rl.withinLimit(ctx, USER_PREFIX+userId, time.Duration(rl.Config.PerUser.Window)*time.Second, rl.Config.PerUser.Limit) {
+	if !rl.withinLimit(ctx, USER_PREFIX+userId, time.Duration(rl.cfg.PerUser.Window)*time.Second, rl.cfg.PerUser.Limit) {
 		return false
 	}
 
-	if cfg, ok := rl.Config.Endpoints[endpoint]; ok {
+	if cfg, ok := rl.cfg.Endpoints[endpoint]; ok {
 		if !rl.withinLimit(ctx, ENDPOINT_PREFIX+endpoint, time.Duration(cfg.Window)*time.Second, cfg.Limit) {
 			return false
 		}

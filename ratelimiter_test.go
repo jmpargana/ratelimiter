@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jmpargana/rate/store"
+	"github.com/jmpargana/ratelimiter/store"
 	r "github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go/modules/redis"

@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/jmpargana/rate/store"
+	"github.com/jmpargana/ratelimiter/store"
 	"sigs.k8s.io/yaml"
 )
 

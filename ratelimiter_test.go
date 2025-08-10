@@ -40,6 +40,7 @@ per_user:
 }
 
 func TestMain(m *testing.M) {
+	os.Setenv("GOMAXPROCS", "1")
 	ctx := context.Background()
 	redisC, err := redis.Run(context.Background(), "redis:6")
 	if err != nil {
@@ -50,6 +51,12 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	rdb = r.NewClient(&r.Options{Addr: ep})
+	for {
+		if err := rdb.Ping(ctx).Err(); err == nil {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 	code := m.Run()
 	redisC.Terminate(ctx)
 	os.Exit(code)
@@ -78,7 +85,7 @@ func TestGlobal(t *testing.T) {
 	assert.True(t, rl.Allow(ctx, "", "user1"), "first")
 	assert.True(t, rl.Allow(ctx, "", "user2"), "second")
 	assert.False(t, rl.Allow(ctx, "", "user3"), "third")
-	time.Sleep(1 * time.Second)
+	time.Sleep(1100 * time.Millisecond)
 	assert.True(t, rl.Allow(ctx, "", "usert4"), "after timeout")
 
 }
@@ -89,7 +96,7 @@ func TestEndpointRateLimiterBelowGlobal(t *testing.T) {
 
 	assert.True(t, rl.Allow(ctx, "/path1", "user1"), "first")
 	assert.False(t, rl.Allow(ctx, "/path1", "user2"), "second")
-	time.Sleep(1 * time.Second)
+	time.Sleep(1100 * time.Millisecond)
 	assert.True(t, rl.Allow(ctx, "/path1", "user3"), "after timeout")
 }
 
@@ -100,7 +107,7 @@ func TestEndpointRateLimiterAboveGlobal(t *testing.T) {
 	assert.True(t, rl.Allow(ctx, "/path2", "user1"), "first")
 	assert.True(t, rl.Allow(ctx, "/path2", "user2"), "second")
 	assert.False(t, rl.Allow(ctx, "/path2", "user3"), "third")
-	time.Sleep(1 * time.Second)
+	time.Sleep(1100 * time.Millisecond)
 	assert.True(t, rl.Allow(ctx, "/path2", "user4"), "after timeout")
 }
 
@@ -110,7 +117,7 @@ func TestUser(t *testing.T) {
 
 	assert.True(t, rl.Allow(ctx, "/path2", "user1"), "first")
 	assert.False(t, rl.Allow(ctx, "/path2", "user1"), "second")
-	time.Sleep(1 * time.Second)
+	time.Sleep(1100 * time.Millisecond)
 	assert.True(t, rl.Allow(ctx, "/path2", "user1"), "after timeout")
 }
 

@@ -13,7 +13,7 @@ import (
 const (
 	USER_PREFIX     = "usr:"
 	ENDPOINT_PREFIX = "ep:"
-	GLOBAL_PREFIX   = "global:"
+	GLOBAL_PREFIX   = "global"
 )
 
 // rateLimiterOptions defines the rate limit settings for global and per-user rate limiting.

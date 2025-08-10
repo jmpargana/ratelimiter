@@ -20,7 +20,7 @@ The package works with an external counter store to track usage counts, making i
 ## Installation
 
 ```bash
-go get github.com/yourusername/ratelimiter
+go get github.com/jmpargana/ratelimiter
 ```
 
 ## Usage
@@ -33,8 +33,8 @@ import (
     "fmt"
     "log"
 
-    "github.com/yourusername/ratelimiter"
-    "github.com/yourusername/ratelimiter/store"
+    "github.com/jmpargana/ratelimiter"
+    "github.com/jmpargana/ratelimiter/store"
     "github.com/go-redis/redis/v9"
 )
 
@@ -78,7 +78,7 @@ The configuration is loaded from a YAML file and supports:
 - Per-user limits identified by a user ID.
 - Endpoint-specific limits that override other limits.
 
-Example `config.yaml`:
+### Example `config.yaml`:
 
 ```yaml
 global:
@@ -92,3 +92,35 @@ endpoints:
     limit: 50
     window: 60
 ```
+
+### Configuration fields:
+
+| Field                     | Description                                                |
+| ------------------------- | ---------------------------------------------------------- |
+| `global.limit`            | Max allowed requests for all users combined per window.    |
+| `global.window`           | Time window in seconds.                                    |
+| `per_user.limit`          | Max allowed requests per user per window.                  |
+| `per_user.window`         | Time window in seconds.                                    |
+| `endpoints.<path>.limit`  | Max allowed requests for the specific endpoint per window. |
+| `endpoints.<path>.window` | Time window in seconds for that endpoint.                  |
+
+
+## Storage Backends
+
+The rate limiter requires a store implementing:
+
+```go
+type CounterStore interface {
+    Increment(ctx context.Context, key string, windowSeconds int) (count int, err error)
+}
+```
+
+You can implement your own or use the provided in-memory store for testing:
+
+```go
+s := store.NewMemoryStore()
+```
+
+## License
+
+MIT License. See [LICENSE](LICENSE.md) for details.

@@ -16,28 +16,39 @@ const (
 	GLOBAL_PREFIX   = "global:"
 )
 
-// Window in seconds
+// rateLimiterOptions defines the rate limit settings for global and per-user rate limiting.
+// Limit is the maximum allowed actions per window, and Window is the time window in seconds.
 type rateLimiterOptions struct {
 	Limit  int `json:"limit,omitempty"`
 	Window int `json:"window,omitempty"`
 }
 
+// rateLimiterEndpointOptions defines rate limit settings specific to an endpoint.
+// Limit is the maximum allowed actions per window, and Window is the time window in seconds.
 type rateLimiterEndpointOptions struct {
 	Limit  int `json:"limit,omitempty"`
 	Window int `json:"window,omitempty"`
 }
 
+// RateLimiterConfig holds the configuration for the rate limiter including global,
+// per-user, and per-endpoint limits.
 type RateLimiterConfig struct {
 	Global    *rateLimiterOptions                    `json:"global,omitempty"`
 	Endpoints map[string]*rateLimiterEndpointOptions `json:"endpoints,omitempty"`
 	PerUser   *rateLimiterOptions                    `json:"per_user,omitempty"`
 }
 
+// RateLimiter provides methods to enforce rate limiting based on the provided
+// configuration and a counter store implementation.
 type RateLimiter struct {
 	m      store.CounterStore
 	Config *RateLimiterConfig
 }
 
+// LoadConfig reads a YAML configuration file from the given filepath
+// and unmarshals it into a RateLimiterConfig struct.
+//
+// Returns an error if reading the file or unmarshalling fails.
 func LoadConfig(filepath string) (*RateLimiterConfig, error) {
 	var cfg RateLimiterConfig
 	b, err := os.ReadFile(filepath)
@@ -50,6 +61,12 @@ func LoadConfig(filepath string) (*RateLimiterConfig, error) {
 	return &cfg, nil
 }
 
+// New creates a new RateLimiter instance using the provided configuration and store.
+//
+// Validates that the store is not nil, the global and per-user configurations
+// are present and valid, and all endpoint configs are valid.
+//
+// Returns an error if validation fails.
 func New(cfg *RateLimiterConfig, store store.CounterStore) (*RateLimiter, error) {
 	if store == nil {
 		return nil, fmt.Errorf("nil store")
@@ -78,18 +95,23 @@ func New(cfg *RateLimiterConfig, store store.CounterStore) (*RateLimiter, error)
 	return rl, nil
 }
 
-// user identifier can be anything from IP, UA, API Key, etc.
+// Allow checks whether a request from a given user to a specified endpoint
+// is allowed based on the global, per-user, and per-endpoint rate limits.
+//
+// The userId parameter can be any identifier, such as IP, user agent, or API key.
+//
+// Returns true if the request is within all applicable limits; false otherwise.
 func (rl *RateLimiter) Allow(ctx context.Context, endpoint, userId string) bool {
-	if !rl.withinLimit(ctx, GLOBAL_PREFIX, time.Duration(rl.Config.Global.Window), rl.Config.Global.Limit) {
+	if !rl.withinLimit(ctx, GLOBAL_PREFIX, time.Duration(rl.Config.Global.Window)*time.Second, rl.Config.Global.Limit) {
 		return false
 	}
 
-	if !rl.withinLimit(ctx, USER_PREFIX+userId, time.Duration(rl.Config.PerUser.Window), rl.Config.PerUser.Limit) {
+	if !rl.withinLimit(ctx, USER_PREFIX+userId, time.Duration(rl.Config.PerUser.Window)*time.Second, rl.Config.PerUser.Limit) {
 		return false
 	}
 
 	if cfg, ok := rl.Config.Endpoints[endpoint]; ok {
-		if !rl.withinLimit(ctx, ENDPOINT_PREFIX+endpoint, time.Duration(cfg.Window), cfg.Limit) {
+		if !rl.withinLimit(ctx, ENDPOINT_PREFIX+endpoint, time.Duration(cfg.Window)*time.Second, cfg.Limit) {
 			return false
 		}
 	}
@@ -97,6 +119,10 @@ func (rl *RateLimiter) Allow(ctx context.Context, endpoint, userId string) bool 
 	return true
 }
 
+// withinLimit increments the counter for the given key within the specified window duration
+// and checks if the count is within the allowed limit.
+//
+// Returns true if the count is less than or equal to the limit; false otherwise.
 func (rl *RateLimiter) withinLimit(ctx context.Context, key string, window time.Duration, limit int) bool {
 	count, err := rl.m.Incr(ctx, key, window)
 	if err != nil {
